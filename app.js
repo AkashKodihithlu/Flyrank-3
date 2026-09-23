@@ -19,6 +19,13 @@ let tasks = [
 ];
 let nextId = 4;
 
+// Helper function to format task output (ensures done is a boolean)
+const formatTask = (task) => ({
+  id: task.id,
+  title: task.title,
+  done: Boolean(task.done)
+});
+
 // GET / - API Info
 app.get('/', (req, res) => {
   res.json({
@@ -32,19 +39,25 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// GET /tasks - List all tasks
+// GET /tasks - List all tasks (Stage 1: database read)
 app.get('/tasks', (req, res) => {
-  res.json(tasks);
+  const tasksFromDb = db.prepare('SELECT * FROM tasks').all();
+  res.json(tasksFromDb.map(formatTask));
 });
 
-// GET /tasks/:id - Get a single task by id
+// GET /tasks/:id - Get a single task by id (Stage 1: parameterized query)
 app.get('/tasks/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const task = tasks.find(t => t.id === id);
+  if (isNaN(id)) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
   if (!task) {
     return res.status(404).json({ error: 'Task not found' });
   }
-  res.json(task);
+
+  res.json(formatTask(task));
 });
 
 // POST /tasks - Create a new task
