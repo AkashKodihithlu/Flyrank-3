@@ -55,10 +55,53 @@
         }
       }
     },
+    "/stats": {
+      "get": {
+        "summary": "Task statistics",
+        "description": "Returns counts of total, completed, and pending tasks computed using SQL aggregate functions",
+        "responses": {
+          "200": {
+            "description": "Task statistics counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "integer", "example": 3 },
+                    "completed": { "type": "integer", "example": 2 },
+                    "pending": { "type": "integer", "example": 1 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tasks": {
       "get": {
         "summary": "List all tasks",
-        "description": "Retrieve all tasks stored in the system",
+        "description": "Retrieve all tasks stored in SQLite with optional filtering and sorting",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Case-insensitive title search keyword",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "done",
+            "in": "query",
+            "description": "Filter by completion status (true or false)",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sort order: asc (or title) for alphabetical, desc for reverse",
+            "schema": { "type": "string" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Array of task objects",

@@ -127,3 +127,41 @@ node scripts/explore.js
    - Stop the server process (`Ctrl+C`).
    - Start the server again (`node app.js`).
    - Send `GET /tasks` — Task 4 remains present on disk.
+
+---
+
+## Extras & Stretch Goals
+
+This project implements all optional stretch goals:
+
+### 1. SQL Search (`GET /tasks?search=keyword`)
+Uses SQL's `LIKE` operator (`WHERE title LIKE ?`) to perform case-insensitive substring search directly within the SQLite engine.
+
+### 2. Filter by Completion Status (`GET /tasks?done=true` or `GET /tasks?done=false`)
+Uses SQL `WHERE done = 1` or `WHERE done = 0` to filter tasks at the database level rather than filtering in JavaScript.
+
+### 3. Alphabetical Sorting (`GET /tasks?sort=title` or `GET /tasks?sort=desc`)
+Uses SQL `ORDER BY title ASC` or `ORDER BY title DESC` to delegate sorting directly to SQLite.
+
+### 4. Real Statistics (`GET /stats`)
+Computes aggregated counts using SQL aggregate functions:
+```json
+{
+  "total": 3,
+  "completed": 2,
+  "pending": 1
+}
+```
+
+### 5. Database Indexes
+Added B-tree indexes for fast queries:
+```sql
+CREATE INDEX IF NOT EXISTS idx_tasks_title ON tasks(title);
+CREATE INDEX IF NOT EXISTS idx_tasks_done ON tasks(done);
+```
+> **What an index is for:** An index is a specialized lookup data structure (B-tree) maintained by the database that allows rows matching search or filter conditions to be located rapidly without scanning every row in the table sequentially.
+
+### 6. Multi-Step Transactions
+Database seeding is wrapped in `db.transaction()`:
+> **Why transactions matter:** A transaction guarantees atomicity (all-or-nothing execution), ensuring that if any single insert fails during a multi-row operation, the entire operation rolls back safely without leaving the database in a corrupted or half-seeded state.
+

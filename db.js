@@ -15,6 +15,9 @@ db.exec(`
     title TEXT NOT NULL,
     done INTEGER NOT NULL DEFAULT 0
   );
+
+  CREATE INDEX IF NOT EXISTS idx_tasks_title ON tasks(title);
+  CREATE INDEX IF NOT EXISTS idx_tasks_done ON tasks(done);
 `);
 
 // Seed three example tasks only if the table is empty

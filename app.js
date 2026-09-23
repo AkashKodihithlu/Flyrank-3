@@ -32,9 +32,60 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// GET /tasks - List all tasks (Stage 1: database read)
+// GET /stats - Real statistics using SQL aggregate functions (Optional Extra)
+app.get('/stats', (req, res) => {
+  const stats = db.prepare(`
+    SELECT 
+      COUNT(*) AS total,
+      SUM(CASE WHEN done = 1 THEN 1 ELSE 0 END) AS completed,
+      SUM(CASE WHEN done = 0 THEN 1 ELSE 0 END) AS pending
+    FROM tasks
+  `).get();
+
+  res.json({
+    total: stats.total || 0,
+    completed: stats.completed || 0,
+    pending: stats.pending || 0
+  });
+});
+
+// GET /tasks - List tasks with optional search, filter, and sort (Extras)
 app.get('/tasks', (req, res) => {
-  const tasksFromDb = db.prepare('SELECT * FROM tasks').all();
+  const { search, done, sort } = req.query;
+
+  let query = 'SELECT * FROM tasks';
+  const conditions = [];
+  const params = [];
+
+  // Filter by search keyword (LIKE %...%)
+  if (search && typeof search === 'string' && search.trim() !== '') {
+    conditions.push('title LIKE ?');
+    params.push(`%${search.trim()}%`);
+  }
+
+  // Filter by status (done=true or done=false)
+  if (done !== undefined) {
+    if (done === 'true' || done === '1') {
+      conditions.push('done = 1');
+    } else if (done === 'false' || done === '0') {
+      conditions.push('done = 0');
+    }
+  }
+
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  // Sort alphabetically or by id
+  if (sort === 'title' || sort === 'asc') {
+    query += ' ORDER BY title ASC';
+  } else if (sort === 'desc') {
+    query += ' ORDER BY title DESC';
+  } else {
+    query += ' ORDER BY id ASC';
+  }
+
+  const tasksFromDb = db.prepare(query).all(...params);
   res.json(tasksFromDb.map(formatTask));
 });
 
