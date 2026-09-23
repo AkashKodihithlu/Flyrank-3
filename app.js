@@ -11,13 +11,6 @@ app.use(express.json());
 // Interactive API Documentation
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// In-memory data store for Assignment 1
-let tasks = [
-  { id: 1, title: 'Learn Express basics', done: true },
-  { id: 2, title: 'Build a CRUD API', done: true },
-  { id: 3, title: 'Connect to SQLite database', done: false }
-];
-let nextId = 4;
 
 // Helper function to format task output (ensures done is a boolean)
 const formatTask = (task) => ({
@@ -80,46 +73,61 @@ app.post('/tasks', (req, res) => {
   res.status(201).json(newTask);
 });
 
-// PUT /tasks/:id - Update task title and/or done
+// PUT /tasks/:id - Update task title and/or done (Stage 3: update with SQL)
 app.put('/tasks/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const task = tasks.find(t => t.id === id);
-  if (!task) {
+  if (isNaN(id)) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+
+  const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  if (!existing) {
     return res.status(404).json({ error: 'Task not found' });
   }
 
   const { title, done } = req.body;
-
   if (title === undefined && done === undefined) {
     return res.status(400).json({ error: 'At least one field (title or done) must be provided' });
   }
+
+  let updatedTitle = existing.title;
+  let updatedDone = existing.done;
 
   if (title !== undefined) {
     if (typeof title !== 'string' || title.trim() === '') {
       return res.status(400).json({ error: 'Title must be a non-empty string' });
     }
-    task.title = title.trim();
+    updatedTitle = title.trim();
   }
 
   if (done !== undefined) {
     if (typeof done !== 'boolean') {
       return res.status(400).json({ error: 'Done must be a boolean' });
     }
-    task.done = done;
+    updatedDone = done ? 1 : 0;
   }
 
-  res.json(task);
+  db.prepare('UPDATE tasks SET title = ?, done = ? WHERE id = ?').run(updatedTitle, updatedDone, id);
+
+  res.json({
+    id,
+    title: updatedTitle,
+    done: Boolean(updatedDone)
+  });
 });
 
-// DELETE /tasks/:id - Delete a task
+// DELETE /tasks/:id - Delete a task (Stage 3: delete with SQL)
 app.delete('/tasks/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const index = tasks.findIndex(t => t.id === id);
-  if (index === -1) {
+  if (isNaN(id)) {
     return res.status(404).json({ error: 'Task not found' });
   }
 
-  tasks.splice(index, 1);
+  const info = db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+  if (info.changes === 0) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+
   res.status(204).send();
 });
 
